@@ -1,8 +1,4 @@
-//
-// Author: Leonardo Arcari
-// Mail: leonardo1[dot]arcari[at]gmail[dot]com
-// Date: 17/05/17.
-//
+
 
 #ifndef SHARP_SHARP_H
 #define SHARP_SHARP_H

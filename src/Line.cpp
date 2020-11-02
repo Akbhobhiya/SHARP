@@ -1,8 +1,3 @@
-//
-// Author: Leonardo Arcari
-// Mail: leonardo1[dot]arcari[at]gmail[dot]com
-// Date: 18/05/17.
-//
 
 #include "../include/Line.h"
 

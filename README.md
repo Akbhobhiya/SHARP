@@ -1,6 +1,6 @@
 # SHARP
 
-Contributor :
-1.Asis Rout
-2.Jeeukrishnan Kayshyap
-3.Ashok Bhbohiya
+### Contributor :
+##### 1.Ashok Bhbohiya
+##### 2.Asis Rout
+##### 3.Jeeukrishnan Kayshyap

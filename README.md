@@ -13,7 +13,7 @@
 It will create a exe file
 run it now using bellow command-
 
-``./sharp -r ../demo/reference -t ../demo/test/tr_ovel.jpg``
+``./sharp -r ../demo/reference -t ../demo/test/tr_oval.jpg``
 
 
 

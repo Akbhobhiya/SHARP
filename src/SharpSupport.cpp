@@ -1,4 +1,3 @@
-
 #include "../include/SharpSupport.h"
 
 #include <boost/filesystem.hpp>

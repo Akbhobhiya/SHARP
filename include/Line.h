@@ -2,7 +2,7 @@
 #define SHARP_LINE_H
 
 #include <climits>
-#include <opencv/cv.hpp>
+#include <opencv2/opencv.hpp>
 #include "../external/easyloggingpp_v9.94.2/easylogging++.h"
 namespace aapp {
 

@@ -1,4 +1,3 @@
-
 #include "../include/Sharp.h"
 #include "../include/SharpSupport.h"
 
@@ -105,7 +104,7 @@ void buildReferenceDB(const std::string &refPath, SharpContext &context) {
   }
 
   // Restore input number of threads.
-  // context.setThreads(oldThreads);
+  context.setThreads(oldThreads);
 }
 
 void sharp(const std::string &testShape, const std::string &referencePath,
@@ -115,7 +114,7 @@ void sharp(const std::string &testShape, const std::string &referencePath,
   auto context = std::make_shared<SharpContext>(shapeSize, minTheta, maxTheta,
                                                 thetaStep, lenThresh, threads);
   buildReferenceDB(referencePath, *context);
-  // omp_set_num_threads(context->threads());
+  omp_set_num_threads(context->threads());
 
   LOG(DEBUG) << "Running SHARP on test shape: " << testShape;
 
@@ -125,45 +124,54 @@ void sharp(const std::string &testShape, const std::string &referencePath,
   auto binaryTShape = detectEdges(tshape);
 
 // Debugging purpose
-  using Clock = std::chrono::steady_clock;
-  decltype(Clock::now()) start;
-  // Last thread, that collects all partial data at last, starts a clock
-  start = Clock::now();
 
-  // Compute partial shlt
-  auto slht = partialSLHT(binaryTShape, *context, 1);
-
-  // Compute partial signature
-  auto stirs = partialSignature(*slht, *context, 1);
-
-  // Iterate over reference shapes and match
-  for (auto &ref : context->referenceShapes()) {
-    auto score =
-        partialMatch(*stirs, *ref.Stirs(), *context, 1);
-    LOG(DEBUG) << "Matching score for " << ref.path() << "\n  " << *score;
-    score = participateInAdd(std::move(score), *context, 1);
-    if (1 == context->threads() - 1) {
-      auto max = 0.0;
-      auto max_index = 0;
-      for (auto theta = 0; theta < score->size(); ++theta) {
-        if ((*score)[theta] > max) {
-          max = (*score)[theta];
-          max_index = theta;
-        }
-      }
-
-      //LOG(INFO) << "Final score: " << *score;
-      LOG(INFO) << ref.path() << "\n  Peak found at [theta = "
-                << max_index * context->thetaStep() << ", score = " << max
-                << "]";
+#pragma omp parallel default(shared) shared(context, binaryTShape)
+  {
+    using Clock = std::chrono::steady_clock;
+    decltype(Clock::now()) start;
+    // Last thread, that collects all partial data at last, starts a clock
+    if (omp_get_thread_num() == context->threads() - 1) {
+      start = Clock::now();
     }
-// #pragma omp barrier
-  }
 
-  if (1 == context->threads() - 1) {
-    auto end = Clock::now();
-    auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    LOG(INFO) << "Time spent in shape recognition: " << diff.count()<< "ms\n";
+    // Compute partial shlt
+    auto slht = partialSLHT(binaryTShape, *context, omp_get_thread_num());
+
+    // Compute partial signature
+    auto stirs = partialSignature(*slht, *context, omp_get_thread_num());
+
+    // Iterate over reference shapes and match
+    for (auto &ref : context->referenceShapes()) {
+      auto score =
+          partialMatch(*stirs, *ref.Stirs(), *context, omp_get_thread_num());
+      LOG(DEBUG) << "Matching score for " << ref.path() << "\n  " << *score;
+      score =
+          participateInAdd(std::move(score), *context, omp_get_thread_num());
+      if (omp_get_thread_num() == context->threads() - 1) {
+        auto max = 0.0;
+        auto max_index = 0;
+        for (auto theta = 0; theta < score->size(); ++theta) {
+          if ((*score)[theta] > max) {
+            max = (*score)[theta];
+            max_index = theta;
+          }
+        }
+
+        //LOG(INFO) << "Final score: " << *score;
+        LOG(INFO) << ref.path() << "\n  Peak found at [theta = "
+                  << max_index * context->thetaStep() << ", score = " << max
+                  << "]";
+      }
+#pragma omp barrier
+    }
+
+    if (omp_get_thread_num() == context->threads() - 1) {
+      auto end = Clock::now();
+      auto diff =
+          std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+      LOG(INFO) << "Time spent in shape recognition: " << diff.count()
+                << "ms\n";
+    }
   }
 }
 
@@ -178,8 +186,10 @@ partialSLHT(const cv::Mat &testShape, SharpContext &context, int processorId) {
 
   auto distances = d2i(context.maxDist() - context.minDist() + 1);
 
-  LOG(DEBUG) << "SLHT matrix size: " << context.orientations() << " x "<< distances;
+  LOG(DEBUG) << "SLHT matrix size: " << context.orientations() << " x "
+             << distances;
   auto slht = buildHough<SharpContext::Slht>(context.orientations(), distances);
+
   for (int x = 0; x < testShape.cols; ++x) {
     for (int y = 0; y < testShape.rows; ++y) {
       auto pixel = testShape.at<cv::Vec3b>(x, y);
@@ -217,11 +227,15 @@ partialSignature(const SharpContext::Slht &slht, SharpContext &context,
   auto min = thetaInterval.first;
   auto max = thetaInterval.second;
 
-  LOG(DEBUG) << "Evaluating signature for angles [" << min << ", " << max<< "]";
-  auto distances = static_cast<unsigned int>(context.maxDist() - context.minDist()) + 1;
+  LOG(DEBUG) << "Evaluating signature for angles [" << min << ", " << max
+             << "]";
+
+  auto distances =
+      static_cast<unsigned int>(context.maxDist() - context.minDist()) + 1;
 
   auto acc = buildHough<SharpContext::Acc>(context.orientations(), distances);
-  auto stirs = buildHough<SharpContext::Stirs>(context.orientations(), distances);
+  auto stirs =
+      buildHough<SharpContext::Stirs>(context.orientations(), distances);
 
   for (auto theta = min; theta < max; theta += context.thetaStep()) {
     auto t_i = d2i(theta / context.thetaStep());
@@ -297,9 +311,9 @@ partialMatch(const SharpContext::Stirs &testStirs,
   return score;
 }
 
-std::unique_ptr<SharpContext::Score> participateInAdd(std::unique_ptr<SharpContext::Score> score,
-  SharpContext &context, int processorId)
-  {
+std::unique_ptr<SharpContext::Score>
+participateInAdd(std::unique_ptr<SharpContext::Score> score,
+                 SharpContext &context, int processorId) {
 
   auto logP = d2i((std::log2(context.threads())));
 
@@ -326,7 +340,7 @@ std::unique_ptr<SharpContext::Score> participateInAdd(std::unique_ptr<SharpConte
                        [](auto f, auto s) { return f + s; });
       }
     }
-// #pragma omp barrier
+#pragma omp barrier
   }
 
   return localScore;
@@ -344,7 +358,7 @@ static void configureLogger() {
 
   Helpers::installCustomFormatSpecifier(
       CustomFormatSpecifier("%omp_tid", [](auto m) {
-        return "Thread " + std::to_string(1);
+        return "Thread " + std::to_string(omp_get_thread_num());
       }));
   defaultConf.setGlobally(ConfigurationType::Format, "[%omp_tid] %msg");
   Loggers::reconfigureLogger("default", defaultConf);
@@ -372,8 +386,8 @@ SharpContext::SharpContext(int shapeSize, double minTheta, double maxTheta,
   }
 
   // Initialize Locks
-  // using lSize = decltype(_locks.size());
-  // _locks = std::vector<aapp::OmpLock>(static_cast<lSize>(_threads));
+  using lSize = decltype(_locks.size());
+  _locks = std::vector<aapp::OmpLock>(static_cast<lSize>(_threads));
 
   // Logger
   configureLogger();
@@ -417,23 +431,23 @@ const std::vector<aapp::ReferenceShape> &SharpContext::referenceShapes() const {
 
 void SharpContext::sendScoreTo(std::unique_ptr<SharpContext::Score> score,
                                int processorId) {
-  // _locks[processorId].set();
+  _locks[processorId].set();
   _scoresVault[processorId].first = std::move(score);
   _scoresVault[processorId].second = true;
-  // _locks[processorId].unset();
+  _locks[processorId].unset();
 }
 
 std::unique_ptr<SharpContext::Score>
 SharpContext::receiveScore(int processorId) {
   while (true) {
-    // _locks[processorId].set();
+    _locks[processorId].set();
     if (_scoresVault[processorId].second) {
       _scoresVault[processorId].second = false;
       auto ret = std::move(_scoresVault[processorId].first);
-      // _locks[processorId].unset();
+      _locks[processorId].unset();
       return ret;
     }
-    // _locks[processorId].unset();
+    _locks[processorId].unset();
   }
 }
 }

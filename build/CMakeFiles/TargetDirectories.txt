@@ -1,3 +1,0 @@
-/home/ashok/Desktop/5th Semester/5PC/Project/sharp/build/CMakeFiles/rebuild_cache.dir
-/home/ashok/Desktop/5th Semester/5PC/Project/sharp/build/CMakeFiles/edit_cache.dir
-/home/ashok/Desktop/5th Semester/5PC/Project/sharp/build/CMakeFiles/sharp.dir

@@ -1,7 +1,3 @@
-//
-// Created by leonardoarcari on 31/05/17.
-//
-
 #include "SharpTest.h"
 
 #include "../include/SharpSupport.h"

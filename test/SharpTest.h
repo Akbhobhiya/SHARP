@@ -1,7 +1,3 @@
-//
-// Created by leonardoarcari on 31/05/17.
-//
-
 #ifndef SHARP_SHARPTEST_H
 #define SHARP_SHARPTEST_H
 

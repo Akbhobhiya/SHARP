@@ -1,4 +1,3 @@
-
 #include "../include/Line.h"
 
 namespace aapp {

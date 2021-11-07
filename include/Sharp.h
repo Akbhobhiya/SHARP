@@ -1,5 +1,3 @@
-
-
 #ifndef SHARP_SHARP_H
 #define SHARP_SHARP_H
 
@@ -7,7 +5,7 @@
 
 #include <climits>
 #include <memory>
-#include <opencv/cv.hpp>
+#include <opencv2/opencv.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <string>
 

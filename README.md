@@ -13,7 +13,10 @@
 It will create a exe file
 run it now using bellow command-
 
-``./sharp -r ../demo/reference -t ../demo/test/tr_oval.jpg``
+``./sharp -r ../demo/reference -t ../demo/test/tr_oval.jpg --threads 2`` 
+
+to experiment increase/decrease the threads value
+
 
 
 
